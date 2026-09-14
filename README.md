@@ -1,35 +1,34 @@
 # Deep Learning-Based Diffusion MRI Tractography: Integrating Spatial and Anatomical Information
 
-本项目基于 Andrej Karpathy 的 [nanoGPT](https://github.com/karpathy/nanoGPT) 进行深度二次开发，将 Transformer 架构（GPT）应用于扩散磁共振diffusion MRI（dMRI）的白质纤维束追踪（Tractography）。通过将连续的 3D DWI Patch 序列输入 GPT 模型，实现高精度的纤维生长方向预测与流线（Streamlines）追踪。
+This project presents a deep learning framework for white matter streamline tractography in diffusion magnetic resonance imaging (dMRI), substantially adapted from Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT). By deploying a Transformer decoder to process sequential 3D diffusion-weighted imaging (DWI) volumetric patches, the model autoregressively predicts propagation directions to achieve high-precision streamline generation.
+---
+
+## 🌟 Key Features
+
+- **GPT-Based Sequence Modeling:**：Utilizes self-attention mechanisms to capture long-range spatial and contextual dependencies along fiber trajectories in 3D space.
+- **3D Convolution & Dynamic Patch Extraction**：Combines a 3D convolutional network for feature extraction with trilinear interpolation to dynamically sample localized neighborhood DWI signals.
+- **Bidirectional Tractography**：Supports joint forward and backward streamline propagation while enforcing termination criteria and curvature constraints.
+- **Highly Configurable**：Features multi-subject parallel training, Balanced Cosine Loss, and Distributed Data Parallel (DDP) multi-GPU execution.
 
 ---
 
-## 🌟 主要特性
 
-- **基于 GPT 的序列建模**：利用自注意力机制捕获纤维束在三维空间中的长程上下文依赖。
-- **3D 卷积与 DWI Patch 提取**：结合 3D 卷积特征提取网络与三线性插值，实时提取邻域 DWI 信号。
-- **双向追踪（Forward & Backward Tracking）**：支持正向与反向联合生长追踪，自动处理边界停止条件与曲率限制。
-- **高度可配置**：支持多受试者并行训练、类别平衡损失（Balanced Cosine Loss）以及分布式 DDP 训练。
+## 🛠️ Dependencies & Environment Setup
 
----
+The codebase relies on PyTorch alongside specialized neuroimaging libraries for diffusion MRI processing (such as `scilpy` and `dipy`). 
 
-
-## 🛠️ 环境准备与依赖项 (Dependencies)
-
-项目运行依赖 PyTorch 及专用于扩散磁共振数据处理的神经影像学库（如 `scilpy` 与 `dipy`）。
-
-### 核心依赖
+### Core Dependencies
 
 - **Python** >= 3.8
-- **PyTorch** >= 2.0 (推荐支持 CUDA 及 FlashAttention)
-- **dipy** (用于球谐函数拟合、坐标变换及流线计算)
-- **scilpy** (用于 Tractography 数据预处理及分析)
-- **nibabel** (用于 NIfTI 及 TCK 文件读写)
-- **numpy**, **scipy**, **wandb** (可选，用于实验日志记录)
+- **PyTorch** >= 2.0 (Recommended with CUDA and FlashAttention support)
+- **dipy** (For spherical harmonics fitting, coordinate transformations, and streamline operations)
+- **scilpy** (For tractography preprocessing and analytical utilities)
+- **nibabel** (For NIfTI and TCK file I/O operations)
+- **numpy**, **scipy**, **wandb** (Optional, for experiment logging)
 
-### 虚拟环境安装
+### Environment Installation
 
-可通过项目根目录提供的 `environment.yml` 一键创建并激活运行环境：
+You can recreate and activate the environment using the provided `environment.yml`:
 
 ```bash
 conda env create -f environment.yml -n myenv
@@ -37,8 +36,8 @@ conda activate myenv
 ```
 
 
-## 📁 数据集组织格式 (Dataset Structure)
-训练与测试数据需按照受试者（Subject）目录进行组织，结构示例如下：
+## 📁 Dataset Organization
+Training and evaluation datasets must be organized by subject directories following this structure:
 ```
 data_root/
 ├── trainset/
@@ -57,65 +56,66 @@ data_root/
 ```
 
 
-## 📌 注意事项与最佳实践 (Important Notes & Best Practices)
+## 📌 Important Notes & Best Practices
 
-为获得最佳的纤维束追踪与训练效果，请注意以下关键设置：
+To achieve optimal training stability and tractography performance, observe the following guidelines:
 
-1. **分辨率一致性**：本模型在**训练数据与测试数据保持相同空间分辨率**（Spatial Resolution）的条件下表现最佳。
-2. **流线预处理（Streamline Preprocessing）**：
-   - 训练集中的 GT 流线建议采用**固定步长（Fixed Step-size）**重采样。
-   - 训练数据需**截断或填零至 96 个时间步（Timesteps）**（即对应模型默认的 `block_size`）。
+1. **Spatial Resolution Consistency**：The model performs optimally when training and evaluation datasets share the same spatial resolution.
+2. **Streamline Preprocessing**：
+   - Ground-truth (GT) streamlines in the training set should be resampled to a **fixed step-size**.
+   - Streamline sequences must be **truncated or zero-padded to 96 timesteps** (corresponding to the model's default `block_size`).
 
 ---
 
 
-## 🚀 快速开始 (Usage)
-### 1. 模型训练 (Training)
-训练逻辑封装在 `train.py` 中，建议通过启动脚本 `train.sh`执行：
+## 🚀 Usage
+### 1. Model Training
+The core training logic is encapsulated in `train.py` . Execution via the wrapper script `train.sh`is recommended:
 ```bash train.sh```
 
-关键配置参数说明 (`train.sh`)：
+Key Parameters (`train.sh`)：
 ```
---data_root：数据集根目录路径。
+--data_root: Path to the root directory of the dataset.
 
---train_subj / --valid_subj：指定训练与验证集受试者编号。
+--train_subj / --valid_subj: Subject IDs assigned for training and validation splits.
 
---dwi_template / --wm_mask_template：指定 DWI 文件及白质 Mask 的相对路径模板。
+--dwi_template / --wm_mask_template: Relative path templates for DWI volumes and white matter masks.
 
---batch_size：每卡 Batch 大小（默认 256）。
+--batch_size: Per-GPU batch size (default: 256).
 
---block_size：GPT 上下文序列长度（默认 96）。
+--block_size: Maximum context sequence length of the Transformer (default: 96).
 
---ckpt_sn：模型权重保存名称。
+--ckpt_sn: Checkpoint identifier for saving model weights.
 ```
 
-### 2. 纤维束追踪与测试 (Tracking & Inference)
-训练完成后，使用 `track.sh` 调用 `track.py` 开展纤维束推理与生成 .tck 文件：
+### 2. Tractography & Inference
+Upon completing training, execute `track.sh` (which invokes `track.py`) to perform streamline inference and generate `.tck` files:
 ```bash track.sh```
 
-关键配置参数说明 (`track.sh`)：
+Key Parameters (`track.sh`)：
+```
+--dwi_path / --bvec / --bval: Paths to the subject's DWI volume, b-vectors, and b-values.
 
---dwi_path / --bvec / --bval：待追踪受试者的 DWI 图像及 b-values/b-vectors 文件。
+--tracking_mask: Binary white matter tracking mask.
 
---tracking_mask：白质追踪掩模（WM tracking mask）。
+--seeding_mask: Binary mask defining seeding regions.
 
---seeding_mask：种子点生成掩模（Seeding mask）。
+--ckpt_path: Path to the trained checkpoint file (.pt).
 
---ckpt_path：训练好的模型权重文件路径 (.pt)。
+--seeds_per_vox: Number of seed points generated per seed voxel.
 
---seeds_per_vox：每个体素生成的种子点数量。
+--batchsize: Number of streamlines processed concurrently during tracking (default: 2048).
 
---batchsize：并行追踪的流线 Batch 数量（默认 2048）。
+--out_dir & --out_tck: Output directory and filename suffix for generated .tck files.
+```
 
---out_dir 与 --out_tck：输出 .tck 文件的保存路径及后缀。
+## 💡 Codebase Architecture
+`model.py`: Defines the Transformer decoder architecture integrated with a 3D spatial feature extractor, alongside masked and balanced cosine similarity loss functions.
 
-## 💡 代码架构 (Codebase Structure)
-`model.py`：定义结合 3D 特征提取器的 GPT 模型架构与 masked/balanced 余弦相似度损失函数。
+`train.py`: Handles dataset loading, Spherical Harmonics (SH) feature transformations, and the DDP-based training loop.
 
-`train.py`：数据集加载、球谐函数（SH）特征转换及基于 DDP 的模型训练主循环。
+`track.py`: Implements the Tracker and BackwardTracker classes, providing GPU-accelerated patch sampling and bidirectional fiber propagation control.
 
-`track.py`：实现 Tracker 与 BackwardTracker 类，包含 GPU 加速的 Patch 采样与双向纤维生长控制。
+`VoxCoordDataLoader.py`: Data loader managing transformations between voxel coordinates and DWI signals.
 
-`VoxCoordDataLoader.py`：体素坐标与 DWI 数据转换加载器。
-
-`train.sh` / `track.sh`：快速启动训练与评估的一键 Bash 脚本
+`train.sh` / `track.sh`: Bash wrapper scripts for execution of training and evaluation pipelines.
