@@ -1,6 +1,6 @@
 # Deep Learning-Based Diffusion MRI Tractography: Integrating Spatial and Anatomical Information
 
-This project presents a deep learning framework for white matter streamline tractography in diffusion magnetic resonance imaging (dMRI), substantially adapted from Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT). By deploying a Transformer decoder to process sequential 3D diffusion-weighted imaging (DWI) volumetric patches, the model autoregressively predicts propagation directions to achieve high-precision streamline generation.
+This project presents a deep learning framework for white matter streamline tractography in diffusion magnetic resonance imaging (dMRI), substantially adapted from Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT).
 ---
 
 ## 🌟 Key Features
