@@ -13,6 +13,7 @@
 
 ---
 
+
 ## 🛠️ 环境准备与依赖项 (Dependencies)
 
 项目运行依赖 PyTorch 及专用于扩散磁共振数据处理的神经影像学库（如 `scilpy` 与 `dipy`）。
@@ -54,6 +55,19 @@ data_root/
     └── sub-1006/
         ...
 ```
+
+
+## 📌 注意事项与最佳实践 (Important Notes & Best Practices)
+
+为获得最佳的纤维束追踪与训练效果，请注意以下关键设置：
+
+1. **分辨率一致性**：本模型在**训练数据与测试数据保持相同空间分辨率**（Spatial Resolution）的条件下表现最佳。
+2. **流线预处理（Streamline Preprocessing）**：
+   - 训练集中的 GT 流线建议采用**固定步长（Fixed Step-size）**重采样。
+   - 训练数据需**截断或填零至 96 个时间步（Timesteps）**（即对应模型默认的 `block_size`）。
+
+---
+
 
 ## 🚀 快速开始 (Usage)
 ### 1. 模型训练 (Training)
